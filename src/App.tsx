@@ -186,39 +186,50 @@ export default function App() {
     if (!user) return;
 
     const q = query(collection(db, 'tasks'), where('userId', '==', user.uid));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
       const sortedData = data.sort((a, b) => b.createdAt - a.createdAt);
-      
       setTasks(sortedData);
-
-      // Sync local tasks to cloud if any exist after login
-      const pendingLocalTasks = localStorage.getItem('local_tasks');
-      if (pendingLocalTasks) {
-        try {
-          const parsedLocal = JSON.parse(pendingLocalTasks) as Task[];
-          if (parsedLocal.length > 0) {
-            toast.loading("Đang đồng bộ việc cần làm cũ...");
-            for (const localTask of parsedLocal) {
-              await addDoc(collection(db, 'tasks'), {
-                text: localTask.text,
-                completed: localTask.completed,
-                createdAt: localTask.createdAt,
-                userId: user.uid
-              });
-            }
-            localStorage.removeItem('local_tasks');
-            toast.success("Đồng bộ hoàn tất! ✨");
-          }
-        } catch (e) {
-          console.error("Sync error", e);
-        }
-      }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'tasks');
     });
 
     return () => unsubscribe();
+  }, [user]);
+
+  // Sync Tasks On Login
+  useEffect(() => {
+    if (!user) return;
+
+    const syncTasks = async () => {
+      const pendingLocalTasks = localStorage.getItem('local_tasks');
+      if (!pendingLocalTasks) return;
+
+      try {
+        const parsedLocal = JSON.parse(pendingLocalTasks) as Task[];
+        if (parsedLocal.length > 0) {
+          // Remove immediately to prevent race conditions during sync
+          localStorage.removeItem('local_tasks');
+          
+          const toastId = toast.loading("Đang đồng bộ việc cần làm cũ...");
+          for (const localTask of parsedLocal) {
+            await addDoc(collection(db, 'tasks'), {
+              text: localTask.text,
+              completed: localTask.completed,
+              createdAt: localTask.createdAt,
+              userId: user.uid
+            });
+          }
+          toast.success("Đồng bộ hoàn tất! ✨", { id: toastId });
+        } else {
+          localStorage.removeItem('local_tasks');
+        }
+      } catch (e) {
+        console.error("Sync error", e);
+      }
+    };
+
+    syncTasks();
   }, [user]);
 
   // Save to local storage whenever tasks change and user is NOT logged in
@@ -233,36 +244,47 @@ export default function App() {
     if (!user) return;
 
     const q = query(collection(db, 'schedule'), where('userId', '==', user.uid));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEntry));
       setSchedule(data);
-
-      // Sync local schedule to cloud if any exist after login
-      const pendingLocal = localStorage.getItem('local_schedule');
-      if (pendingLocal) {
-        try {
-          const parsedLocal = JSON.parse(pendingLocal) as ScheduleEntry[];
-          if (parsedLocal.length > 0) {
-            toast.loading("Đang đồng bộ lịch cũ của bé...");
-            for (const entry of parsedLocal) {
-              const { id, ...saveData } = entry;
-              await addDoc(collection(db, 'schedule'), {
-                ...saveData,
-                userId: user.uid
-              });
-            }
-            localStorage.removeItem('local_schedule');
-            toast.success("Lịch đã được đồng bộ lên mây! ✨");
-          }
-        } catch (e) {
-          console.error("Schedule sync error", e);
-        }
-      }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'schedule');
     });
 
     return () => unsubscribe();
+  }, [user]);
+
+  // Sync Schedule On Login
+  useEffect(() => {
+    if (!user) return;
+
+    const syncSchedule = async () => {
+      const pendingLocal = localStorage.getItem('local_schedule');
+      if (!pendingLocal) return;
+
+      try {
+        const parsedLocal = JSON.parse(pendingLocal) as ScheduleEntry[];
+        if (parsedLocal.length > 0) {
+          localStorage.removeItem('local_schedule');
+          
+          const toastId = toast.loading("Đang đồng bộ lịch cũ của bé...");
+          for (const entry of parsedLocal) {
+            const { id, ...saveData } = entry;
+            await addDoc(collection(db, 'schedule'), {
+              ...saveData,
+              userId: user.uid
+            });
+          }
+          toast.success("Lịch đã được đồng bộ lên mây! ✨", { id: toastId });
+        } else {
+          localStorage.removeItem('local_schedule');
+        }
+      } catch (e) {
+        console.error("Schedule sync error", e);
+      }
+    };
+
+    syncSchedule();
   }, [user]);
 
   // Save schedule to local storage when not logged in
