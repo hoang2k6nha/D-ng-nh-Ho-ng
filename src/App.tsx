@@ -112,19 +112,25 @@ export default function App() {
 
   // Helper to format date for datetime-local input (YYYY-MM-DDTHH:mm)
   const toLocalISOString = (date: Date) => {
-    const offset = date.getTimezoneOffset() * 60000;
-    const localISOTime = (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
-    return localISOTime;
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "";
+      const tzOffset = d.getTimezoneOffset() * 60000;
+      return (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16);
+    } catch (e) {
+      return "";
+    }
   };
+
+  const [isLoading, setIsLoading] = useState(true);
 
   // Auto-scroll to current hour on load
   useEffect(() => {
-    if (scrollContainerRef.current) {
+    if (scrollContainerRef.current && !isLoading) {
       const currentHour = new Date().getHours();
       scrollContainerRef.current.scrollTop = Math.max(0, (currentHour - 1) * 80);
     }
-  }, []);
-  const [isLoading, setIsLoading] = useState(true);
+  }, [isLoading]);
   
   // States for Modals
   const [showTaskInput, setShowTaskInput] = useState(false);
@@ -142,9 +148,9 @@ export default function App() {
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
       } catch (error: any) {
-        console.error("Firestore Test Detail:", error);
-        if(error.message?.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration.");
+        // Silently handle connection test in background to avoid confusing the user
+        if (error.message?.includes('the client is offline')) {
+          console.log("Ứng dụng đang chạy ở chế độ offline. Dữ liệu sẽ được lưu tạm trên máy.");
         }
       }
     };
@@ -379,14 +385,21 @@ export default function App() {
     };
 
     if (!user) {
-      const offlineEntry: ScheduleEntry = {
-        ...entryToSave,
-        id: Math.random().toString(36).substr(2, 9),
-      } as ScheduleEntry;
-      setSchedule(prev => [...prev, offlineEntry]);
+      if (newEntry.id) {
+        // Edit offline
+        setSchedule(prev => prev.map(s => s.id === newEntry.id ? { ...s, ...entryToSave } as ScheduleEntry : s));
+        toast.success("Đã sửa lịch cho bé! ✨");
+      } else {
+        // Add offline
+        const offlineEntry: ScheduleEntry = {
+          ...entryToSave,
+          id: Math.random().toString(36).substr(2, 9),
+        } as ScheduleEntry;
+        setSchedule(prev => [...prev, offlineEntry]);
+        toast.success("Đã ghi vào sổ tay cho bé! ✨");
+      }
       setShowScheduleForm(false);
       setNewEntry({ type: 'study' });
-      toast.success("Đã ghi vào sổ tay cho bé! ✨");
       return;
     }
 
@@ -804,9 +817,10 @@ export default function App() {
                                    </div>
                                    <button 
                                      onClick={(e) => { e.stopPropagation(); deleteScheduleEntry(event.id); }}
-                                     className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-white/50 rounded transition-all text-red-500"
+                                     className="opacity-0 group-hover/item:opacity-100 p-1 hover:bg-white/50 rounded-lg transition-all text-red-500 bg-white/30 backdrop-blur-sm"
+                                     title="Xóa lịch"
                                    >
-                                     <Trash2 size={10} />
+                                     <Trash2 size={12} />
                                    </button>
                                  </div>
                                  <div className="opacity-70 text-[9px] mt-0.5">
@@ -922,10 +936,15 @@ export default function App() {
                   </button>
                   {newEntry.id && (
                     <button 
-                      onClick={() => { if(newEntry.id) deleteScheduleEntry(newEntry.id); setShowScheduleForm(false); }}
-                      className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-100 transition-all border border-red-100"
+                      type="button"
+                      onClick={(e) => { 
+                        e.preventDefault();
+                        if(newEntry.id) deleteScheduleEntry(newEntry.id); 
+                        setShowScheduleForm(false); 
+                      }}
+                      className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-100 transition-all border border-red-100 shadow-sm"
                     >
-                      <Trash2 size={20} />
+                      <Trash2 size={24} />
                     </button>
                   )}
                 </div>
