@@ -1,26 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #f8fafc;
-  --color-accent: #3b82f6;
+  --color-primary: #ff85a1;      /* Pink Rose */
+  --color-secondary: #ffb8d1;    /* Light Pink */
+  --color-accent: #ffd166;       /* Yellow/Sunshine */
+  --color-sky: #8ecae6;          /* Sky Blue */
+  --color-lavender: #cdb4db;     /* Soft Lavender */
+  --color-bg-primary: #fff9fb;
   --color-surface: #ffffff;
   --radius-xl: 1.5rem;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius-2xl: 2rem;
+  --font-sans: 'Quicksand', 'Outfit', system-ui, sans-serif;
 }
 
 @layer base {
   body {
-    @apply bg-[var(--color-bg-primary)] text-slate-900 antialiased font-sans;
+    @apply bg-[var(--color-bg-primary)] text-slate-700 antialiased font-sans font-medium;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-2xl;
+    @apply bg-white/90 backdrop-blur-md border border-pink-100 shadow-xl shadow-pink-100/50 rounded-2xl;
   }
   
+  .cute-button {
+    @apply px-4 py-2 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2;
+  }
+
   .schedule-block {
-    @apply absolute rounded-lg border-l-4 p-2 text-xs font-medium cursor-pointer transition-all hover:brightness-95 active:scale-[0.98];
+    @apply absolute rounded-2xl border-2 p-2 text-xs font-bold cursor-pointer transition-all hover:brightness-95 active:scale-[0.98] shadow-sm;
   }
 }
 
@@ -31,5 +41,15 @@
   @apply bg-transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300;
+  @apply bg-pink-100 rounded-full hover:bg-pink-200;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
 }

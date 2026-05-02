@@ -292,18 +292,26 @@ export default function App() {
   }, [schedule]);
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden text-slate-800">
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden text-rose-700 font-sans">
       <Toaster position="top-right" />
+      
+      {/* Background Decor */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-20 -z-10">
+        <div className="absolute top-10 left-10 text-4xl animate-float" style={{ animationDelay: '0s' }}>🌸</div>
+        <div className="absolute top-40 right-20 text-3xl animate-float" style={{ animationDelay: '1s' }}>⭐</div>
+        <div className="absolute bottom-20 left-1/4 text-4xl animate-float" style={{ animationDelay: '2.5s' }}>🎀</div>
+        <div className="absolute bottom-40 right-10 text-5xl animate-float" style={{ animationDelay: '1.5s' }}>🍭</div>
+      </div>
       
       {/* Header */}
       <header className="h-16 px-6 flex items-center justify-between glass-card m-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-pink-200 animate-float">
             <CalendarIcon size={22} />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-none">Lịch Cá Nhân</h1>
-            <p className="text-xs text-slate-500 font-medium">{format(new Date(), "'Ngày' d 'tháng' M, yyyy", { locale: vi })}</p>
+            <h1 className="font-bold text-lg leading-none text-rose-600">Lịch của bé Ngọc Hà 🌸</h1>
+            <p className="text-xs text-rose-400 font-bold">{format(new Date(), "'Ngày' d 'tháng' M, yyyy", { locale: vi })}</p>
           </div>
         </div>
 
@@ -323,9 +331,9 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <button 
+              <button 
               onClick={handleLogin}
-              className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-md shadow-blue-100"
+              className="px-4 py-2 bg-primary text-white rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-rose-600 transition-all shadow-md shadow-pink-100"
             >
               <LogIn size={16} /> Đăng nhập
             </button>
@@ -341,18 +349,18 @@ export default function App() {
               animate={{ opacity: 1, scale: 1 }}
               className="max-w-md p-10 glass-card flex flex-col items-center gap-6"
             >
-              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
-                <Cloud size={32} />
+              <div className="w-20 h-20 bg-pink-50 text-rose-500 rounded-3xl flex items-center justify-center animate-beat">
+                <Cloud size={40} />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">Lưu trữ đám mây</h2>
-                <p className="text-slate-500 mt-2">Đăng nhập bằng Google để đồng bộ lịch và danh sách công việc của bạn trên mọi thiết bị.</p>
+                <h2 className="text-2xl font-bold text-rose-600">Góc nhỏ của Ngọc Hà ✨</h2>
+                <p className="text-rose-400 mt-2 font-medium">Đăng nhập để xem lịch học và vui chơi của bé đã được lưu trên mây nhé!</p>
               </div>
               <button 
                 onClick={handleLogin}
-                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3"
+                className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:bg-rose-600 transition-all shadow-xl shadow-pink-100 flex items-center justify-center gap-3"
               >
-                <LogIn size={20} /> Tiếp tục với Google
+                <LogIn size={20} /> Bắt đầu thôi nào! 🎀
               </button>
             </motion.div>
         </div>
@@ -363,13 +371,13 @@ export default function App() {
         <aside className="w-80 flex flex-col gap-4 overflow-hidden">
           <div className="flex-1 glass-card flex flex-col overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-bold flex items-center gap-2">
-                <CheckCircle2 size={18} className="text-blue-600" />
-                Việc cần làm
+              <h2 className="font-bold flex items-center gap-2 text-rose-600">
+                <CheckCircle2 size={18} className="text-rose-500" />
+                Việc bé cần làm
               </h2>
               <button 
                 onClick={() => setShowTaskInput(true)}
-                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-all"
+                className="w-8 h-8 rounded-full bg-pink-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-all shadow-sm"
               >
                 <Plus size={18} />
               </button>
@@ -382,20 +390,20 @@ export default function App() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="p-3 bg-blue-50 rounded-xl border border-blue-100"
+                    className="p-3 bg-pink-50 rounded-xl border border-pink-100"
                   >
                     <input 
                       autoFocus
                       type="text" 
-                      placeholder="Nội dung công việc..."
-                      className="w-full bg-transparent outline-none text-sm"
+                      placeholder="Ngọc Hà muốn làm gì nè? ✨"
+                      className="w-full bg-transparent outline-none text-sm font-bold text-rose-600 placeholder:text-rose-300"
                       value={newTaskText}
                       onChange={(e) => setNewTaskText(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && addTask()}
                     />
                     <div className="flex justify-end gap-2 mt-2">
-                      <button onClick={() => setShowTaskInput(false)} className="text-[10px] text-slate-500 uppercase font-bold">Hủy</button>
-                      <button onClick={addTask} className="text-[10px] text-blue-600 uppercase font-bold">Thêm</button>
+                      <button onClick={() => setShowTaskInput(false)} className="text-[10px] text-rose-400 uppercase font-bold">Thôi ạ</button>
+                      <button onClick={addTask} className="text-[10px] text-rose-600 uppercase font-bold">Thêm luôn! 🌸</button>
                     </div>
                   </motion.div>
                 )}
@@ -416,18 +424,18 @@ export default function App() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="group flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-blue-200 transition-all cursor-pointer"
+                    className="group flex items-center gap-3 p-3 bg-white border border-pink-50 rounded-2xl hover:border-pink-200 transition-all cursor-pointer shadow-sm hover:shadow-md"
                     onClick={() => toggleTask(task)}
                   >
                     {task.completed ? (
-                      <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
+                      <CheckCircle2 size={20} className="text-rose-500 shrink-0" />
                     ) : (
-                      <Circle size={20} className="text-slate-300 shrink-0" />
+                      <Circle size={20} className="text-pink-200 shrink-0" />
                     )}
                     <span 
                       className={cn(
-                        "flex-1 text-sm transition-all",
-                        task.completed && "text-slate-400 line-through"
+                        "flex-1 text-sm font-bold transition-all",
+                        task.completed ? "text-pink-200 line-through" : "text-rose-700"
                       )}
                     >
                       {task.text}
@@ -445,16 +453,16 @@ export default function App() {
           </div>
           
           {/* Quick Reminder Status */}
-          <div className="glass-card p-4 flex items-center gap-3">
-             <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 shrink-0">
-               <Bell size={20} />
+          <div className="glass-card p-4 flex items-center gap-3 border-pink-100 bg-gradient-to-r from-pink-50 to-white">
+             <div className="w-10 h-10 bg-accent rounded-full flex items-center justify-center text-white shrink-0 shadow-sm">
+               <Bell size={20} className="animate-bounce" />
              </div>
              <div className="flex-1">
-               <p className="text-xs font-bold text-slate-400 uppercase">Sắp đến</p>
-               <p className="text-sm font-semibold truncate leading-tight">
+               <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Tin nhắn cho bé</p>
+               <p className="text-sm font-bold text-rose-700 truncate leading-tight">
                  {schedule.filter(s => new Date(s.startTime) > new Date()).length > 0 
-                  ? "Bạn có " + schedule.filter(s => new Date(s.startTime) > new Date()).length + " sự kiện sắp tới"
-                  : "Không có sự kiện nào gần đây"}
+                  ? "Bé có " + schedule.filter(s => new Date(s.startTime) > new Date()).length + " lịch sắp tới kìa!"
+                  : "Hôm nay bé hãy vui chơi thật ngoan nhé!"}
                </p>
              </div>
           </div>
@@ -463,25 +471,25 @@ export default function App() {
         {/* Schedule Grid */}
         <main className="flex-1 glass-card flex flex-col overflow-hidden">
           {/* Calendar Controls */}
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-4 border-b border-pink-50 flex items-center justify-between bg-white/50">
             <div className="flex items-center gap-4">
-              <h2 className="font-bold flex items-center gap-2">
-                <CalendarIcon size={18} className="text-blue-600" />
-                Thời gian biểu
+              <h2 className="font-bold flex items-center gap-2 text-rose-600">
+                <CalendarIcon size={18} className="text-rose-500" />
+                Thời gian biểu của Hà
               </h2>
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+              <div className="flex items-center gap-1 bg-pink-50 p-1 rounded-xl">
                 <button 
                   onClick={() => setCurrentDate(prev => addDays(prev, -7))}
-                  className="p-1 hover:bg-white rounded-md shadow-sm transition-all"
+                  className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <span className="px-3 text-xs font-bold min-w-32 text-center uppercase tracking-wider">
+                <span className="px-3 text-[10px] font-bold min-w-32 text-center uppercase tracking-widest text-rose-500">
                   {format(startOfWeekDate, "d MMM", { locale: vi })} - {format(addDays(startOfWeekDate, 6), "d MMM", { locale: vi })}
                 </span>
                 <button 
                   onClick={() => setCurrentDate(prev => addDays(prev, 7))}
-                  className="p-1 hover:bg-white rounded-md shadow-sm transition-all"
+                  className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -490,9 +498,9 @@ export default function App() {
             
             <button 
               onClick={() => setShowScheduleForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-700 active:scale-95 transition-all shadow-md shadow-blue-100"
+              className="px-4 py-2 bg-primary text-white rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-rose-600 active:scale-95 transition-all shadow-md shadow-pink-100"
             >
-              <Plus size={16} /> Thêm lịch học/làm
+              <Plus size={16} /> Thêm lịch cho bé 🩰
             </button>
           </div>
 
@@ -518,15 +526,15 @@ export default function App() {
                   <div key={dayOffset} className="flex-1 border-l border-slate-100 min-h-full">
                     {/* Day Header */}
                     <div className={cn(
-                      "sticky top-0 h-12 flex flex-col items-center justify-center bg-white z-10 border-b border-slate-100",
-                      isToday && "text-blue-600"
+                      "sticky top-0 h-12 flex flex-col items-center justify-center bg-white z-10 border-b border-pink-50",
+                      isToday && "text-primary"
                     )}>
                       <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">
                         {format(day, "EEEE", { locale: vi })}
                       </span>
                       <span className={cn(
                         "text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full",
-                        isToday && "bg-blue-600 text-white ring-4 ring-blue-50"
+                        isToday && "bg-primary text-white ring-4 ring-pink-50"
                       )}>
                         {format(day, "d")}
                       </span>
@@ -550,17 +558,17 @@ export default function App() {
                            const height = (endHour - startHour) * 80;
 
                            const variants = {
-                             study: "bg-blue-50 border-blue-400 text-blue-700",
-                             work: "bg-amber-50 border-amber-400 text-amber-700",
-                             personal: "bg-emerald-50 border-emerald-400 text-emerald-700",
-                             other: "bg-slate-50 border-slate-400 text-slate-700"
+                             study: "bg-sky-50 border-sky-300 text-sky-700 shadow-sky-100",
+                             work: "bg-lavender/30 border-lavender/60 text-purple-700 shadow-purple-100",
+                             personal: "bg-pink-50 border-primary text-rose-700 shadow-pink-100",
+                             other: "bg-accent/20 border-accent/60 text-amber-700 shadow-amber-100"
                            };
 
                            const icons = {
-                             study: <BookOpen size={12} />,
-                             work: <Briefcase size={12} />,
-                             personal: <Coffee size={12} />,
-                             other: <Clock size={12} />
+                             study: <BookOpen size={12} className="text-sky-500" />,
+                             work: <Briefcase size={12} className="text-purple-500" />,
+                             personal: <Coffee size={12} className="text-pink-500" />,
+                             other: <Clock size={12} className="text-amber-500" />
                            };
 
                            return (
@@ -611,18 +619,18 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="relative w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl"
             >
-              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                 <CalendarIcon className="text-blue-600" />
-                 Thêm sự kiện mới
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-rose-600">
+                 <CalendarIcon className="text-primary" />
+                 Thêm lịch cho bé mới nè
               </h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold uppercase text-slate-400 ml-1">Tiêu đề</label>
+                  <label className="text-[10px] font-bold uppercase text-rose-300 ml-1">Bé làm gì?</label>
                   <input 
                     type="text" 
-                    placeholder="VD: Học Toán 1..." 
-                    className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-300 transition-all font-medium"
+                    placeholder="VD: Bé đi học múa..." 
+                    className="w-full p-3 bg-pink-50/50 border border-pink-100 rounded-2xl outline-none focus:border-primary transition-all font-bold text-rose-700 placeholder:text-rose-200"
                     value={newEntry.title || ''}
                     onChange={e => setNewEntry(prev => ({ ...prev, title: e.target.value }))}
                   />
@@ -630,40 +638,40 @@ export default function App() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold uppercase text-slate-400 ml-1">Bắt đầu</label>
+                    <label className="text-[10px] font-bold uppercase text-rose-300 ml-1">Lúc nào?</label>
                     <input 
                       type="datetime-local" 
-                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-300 transition-all text-sm"
+                      className="w-full p-3 bg-pink-50/50 border border-pink-100 rounded-2xl outline-none focus:border-primary transition-all text-xs font-bold text-rose-600"
                       onChange={e => setNewEntry(prev => ({ ...prev, startTime: new Date(e.target.value).toISOString() }))}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold uppercase text-slate-400 ml-1">Kết thúc</label>
+                    <label className="text-[10px] font-bold uppercase text-rose-300 ml-1">Xong lúc?</label>
                     <input 
                       type="datetime-local" 
-                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-300 transition-all text-sm"
+                      className="w-full p-3 bg-pink-50/50 border border-pink-100 rounded-2xl outline-none focus:border-primary transition-all text-xs font-bold text-rose-600"
                       onChange={e => setNewEntry(prev => ({ ...prev, endTime: new Date(e.target.value).toISOString() }))}
                     />
                   </div>
                 </div>
 
                 <div>
-                   <label className="text-xs font-bold uppercase text-slate-400 ml-1">Loại công việc</label>
+                   <label className="text-[10px] font-bold uppercase text-rose-300 ml-1">Loại lịch nè</label>
                    <div className="flex gap-2 mt-1">
                       {(['study', 'work', 'personal', 'other'] as const).map(type => (
                         <button 
                           key={type}
                           onClick={() => setNewEntry(prev => ({ ...prev, type }))}
                           className={cn(
-                            "flex-1 p-2 rounded-lg text-[10px] font-bold uppercase transition-all border",
+                            "flex-1 p-2 rounded-xl text-[10px] font-bold uppercase transition-all border-2",
                             newEntry.type === type 
-                              ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100" 
-                              : "bg-white text-slate-500 border-slate-100 hover:border-blue-200"
+                              ? "bg-primary text-white border-primary shadow-lg shadow-pink-100" 
+                              : "bg-white text-rose-300 border-pink-50 hover:border-pink-200"
                           )}
                         >
-                          {type === 'study' && "Học"}
-                          {type === 'work' && "Làm"}
-                          {type === 'personal' && "Cá nhân"}
+                          {type === 'study' && "Học tập"}
+                          {type === 'work' && "Việc nhà"}
+                          {type === 'personal' && "Vui chơi"}
                           {type === 'other' && "Khác"}
                         </button>
                       ))}
@@ -672,9 +680,9 @@ export default function App() {
 
                 <button 
                   onClick={addScheduleEntry}
-                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold mt-4 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95"
+                  className="w-full py-4 bg-primary text-white rounded-2xl font-bold mt-4 hover:bg-rose-600 transition-all shadow-xl shadow-pink-100 active:scale-95"
                 >
-                  Xác nhận thêm
+                  Xong rồi ạ! ✨
                 </button>
               </div>
             </motion.div>
