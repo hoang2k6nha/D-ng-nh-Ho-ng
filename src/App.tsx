@@ -174,8 +174,15 @@ export default function App() {
   const handleLogin = async () => {
     try {
       await loginWithGoogle();
-    } catch (e) {
-      toast.error("Đăng nhập thất bại.");
+    } catch (e: any) {
+      console.error("Firebase Login Error:", e);
+      if (e.code === 'auth/popup-blocked') {
+        toast.error("Trình duyệt đã chặn cửa sổ đăng nhập. Hãy cho phép popup.");
+      } else if (e.code === 'auth/unauthorized-domain') {
+        toast.error("Tên miền này chưa được ủy quyền trong Firebase Auth.");
+      } else {
+        toast.error("Đăng nhập thất bại. Kiểm tra Console (F12) để biết chi tiết.");
+      }
     }
   };
 
