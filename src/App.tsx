@@ -138,11 +138,13 @@ export default function App() {
 
   const [isLoading, setIsLoading] = useState(true);
 
+  const HOUR_HEIGHT = 100;
+
   // Auto-scroll to current hour on load
   useEffect(() => {
     if (scrollContainerRef.current && !isLoading) {
       const currentHour = new Date().getHours();
-      scrollContainerRef.current.scrollTop = Math.max(0, (currentHour - 1) * 80);
+      scrollContainerRef.current.scrollTop = Math.max(0, (currentHour - 1) * HOUR_HEIGHT);
     }
   }, [isLoading]);
   
@@ -157,6 +159,10 @@ export default function App() {
   });
 
   const lastUserRef = useRef<User | null>(null);
+  const [selectedDayOffset, setSelectedDayOffset] = useState<number>(() => {
+    const day = new Date().getDay();
+    return day === 0 ? 6 : day - 1; // Convert 0-6 (Sun-Sat) to 0-6 (Mon-Sun)
+  });
 
   // Auth & Connection Test
   useEffect(() => {
@@ -529,23 +535,23 @@ export default function App() {
       </div>
       
       {/* Header */}
-      <header className="h-16 px-6 flex items-center justify-between glass-card m-4 shrink-0">
-        <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-pink-200 animate-float">
+      <header className="h-auto py-3 px-4 sm:h-16 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 glass-card m-2 sm:m-4 shrink-0">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-pink-200 shrink-0">
             <CalendarIcon size={22} />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-none text-rose-600">Lịch của bé Ngọc Hà 🌸</h1>
-            <p className="text-xs text-rose-400 font-bold">{format(new Date(), "'Ngày' d 'tháng' M, yyyy", { locale: vi })}</p>
+            <h1 className="font-bold text-base sm:text-lg leading-none text-rose-600">Lịch của bé Ngọc Hà 🌸</h1>
+            <p className="text-[10px] sm:text-xs text-rose-400 font-bold">{format(new Date(), "'Ngày' d 'tháng' M, yyyy", { locale: vi })}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-slate-400">Đã đồng bộ</p>
-                <p className="text-sm font-semibold">{user.displayName || 'Thành viên'}</p>
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-slate-400">Đã đồng bộ</p>
+                <p className="text-xs sm:text-sm font-semibold truncate max-w-[120px]">{user.displayName || 'Thành viên'}</p>
               </div>
               <button 
                 onClick={handleLogout}
@@ -556,7 +562,7 @@ export default function App() {
               </button>
             </div>
           ) : (
-              <button 
+            <button 
               onClick={handleLogin}
               className="px-4 py-2 bg-primary text-white rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-rose-600 transition-all shadow-md shadow-pink-100"
             >
@@ -590,10 +596,10 @@ export default function App() {
             </motion.div>
         </div>
       ) : (
-        <div className="flex flex-1 overflow-hidden px-4 pb-4 gap-4">
+        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden px-2 sm:px-4 pb-2 sm:pb-4 gap-3 sm:gap-4">
         
         {/* Sidebar - To-Do List */}
-        <aside className="w-80 flex flex-col gap-4 overflow-hidden">
+        <aside className="w-full lg:w-80 flex flex-col gap-4 lg:shrink-0 h-[250px] sm:h-[350px] lg:h-full">
           <div className="flex-1 glass-card flex flex-col overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <h2 className="font-bold flex items-center gap-2 text-rose-600">
@@ -696,49 +702,38 @@ export default function App() {
         {/* Schedule Grid */}
         <main className="flex-1 glass-card flex flex-col overflow-hidden">
           {/* Calendar Controls */}
-          <div className="p-4 border-b border-pink-50 flex items-center justify-between bg-white/50">
-            <div className="flex items-center gap-4">
-              <h2 className="font-bold flex items-center gap-2 text-rose-600">
+          <div className="p-3 sm:p-4 border-b border-pink-50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-white/50">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
+              <h2 className="font-bold flex items-center gap-2 text-rose-600 shrink-0">
                 <CalendarIcon size={18} className="text-rose-500" />
-                Thời gian biểu của Hà
+                <span className="hidden xs:inline">Thời gian biểu của Hà</span>
+                <span className="xs:hidden">Thời gian biểu</span>
               </h2>
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setCurrentDate(new Date())}
-                className="px-3 py-1.5 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100"
-              >
-                Hôm nay
-              </button>
-              <div className="flex items-center gap-1 bg-pink-50 p-1 rounded-xl">
+              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
                 <button 
-                  onClick={() => setCurrentDate(prev => addDays(prev, -7))}
-                  className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
+                  onClick={() => setCurrentDate(new Date())}
+                  className="px-2 py-1.5 bg-rose-50 text-rose-500 rounded-xl text-[10px] sm:text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100 shrink-0"
                 >
-                  <ChevronLeft size={16} />
+                  Hôm nay
                 </button>
-                <span className="px-3 text-[10px] font-bold min-w-32 text-center uppercase tracking-widest text-rose-500">
-                  {format(startOfWeekDate, "d MMM", { locale: vi })} - {format(addDays(startOfWeekDate, 6), "d MMM", { locale: vi })}
-                </span>
-                <button 
-                  onClick={() => setCurrentDate(prev => addDays(prev, -1))}
-                  className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
-                >
-                  <ChevronLeft size={12} className="opacity-50" />
-                </button>
-                <button 
-                  onClick={() => setCurrentDate(prev => addDays(prev, 1))}
-                  className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
-                >
-                  <ChevronRight size={12} className="opacity-50" />
-                </button>
-                <button 
-                  onClick={() => setCurrentDate(prev => addDays(prev, 7))}
-                  className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
-                >
-                  <ChevronRight size={16} />
-                </button>
+                <div className="flex items-center gap-1 bg-pink-50 p-1 rounded-xl shrink-0">
+                  <button 
+                    onClick={() => setCurrentDate(prev => addDays(prev, -7))}
+                    className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="px-2 text-[10px] font-bold min-w-[100px] sm:min-w-[120px] text-center uppercase tracking-wider text-rose-500">
+                    {format(startOfWeekDate, "d MMM", { locale: vi })} - {format(addDays(startOfWeekDate, 6), "d MMM", { locale: vi })}
+                  </span>
+                  <button 
+                    onClick={() => setCurrentDate(prev => addDays(prev, 7))}
+                    className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
             </div>
             
             <button 
@@ -754,21 +749,46 @@ export default function App() {
                 });
                 setShowScheduleForm(true);
               }}
-              className="px-4 py-2 bg-primary text-white rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-rose-600 active:scale-95 transition-all shadow-md shadow-pink-100"
+              className="w-full md:w-auto px-4 py-2 bg-primary text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-rose-600 active:scale-95 transition-all shadow-md shadow-pink-100 shrink-0"
             >
-              <Plus size={16} /> Thêm lịch cho bé 🩰
+              <Plus size={16} /> <span className="sm:inline">Thêm lịch cho bé</span> 🩰
             </button>
+          </div>
+
+          {/* Mobile Day Selector */}
+          <div className="lg:hidden p-2 border-b border-pink-50 flex justify-between bg-white/30 backdrop-blur-sm sticky top-0 z-30 overflow-x-auto gap-1 scrollbar-hide">
+            {[0, 1, 2, 3, 4, 5, 6].map(offset => {
+              const day = addDays(startOfWeekDate, offset);
+              const isSelected = selectedDayOffset === offset;
+              const isToday = isSameDay(day, new Date());
+              
+              return (
+                <button
+                  key={offset}
+                  onClick={() => setSelectedDayOffset(offset)}
+                  className={cn(
+                    "flex flex-col items-center justify-center min-w-[45px] py-2 rounded-2xl transition-all",
+                    isSelected ? "bg-primary text-white shadow-lg shadow-pink-200 scale-105" : "text-rose-400 hover:bg-pink-50",
+                    !isSelected && isToday && "bg-rose-50 border border-rose-100"
+                  )}
+                >
+                  <span className="text-[10px] font-bold uppercase opacity-70">
+                    {format(day, "EE", { locale: vi }).replace("Th ", "T")}
+                  </span>
+                  <span className="text-sm font-bold">{format(day, "d")}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Grid Content */}
           <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative">
-            <div className="flex min-w-[800px] h-full">
+            <div className="flex min-w-full lg:min-w-[800px] h-full">
               {/* Time Column */}
-              <div className="w-16 shrink-0 sticky left-0 bg-white/95 backdrop-blur-sm z-20 pt-12 border-r border-pink-50">
+              <div className="w-14 sm:w-16 shrink-0 sticky left-0 bg-white/95 backdrop-blur-sm z-20 pt-12 border-r border-pink-50">
                 {HOURS.map(hour => (
-                  <div key={hour} className="h-20 flex flex-col justify-start items-center">
-                    <span className="text-[10px] font-bold text-rose-300 mt-[-7px]">{hour}:00</span>
-                    <div className="flex-1 w-px bg-pink-50/50" />
+                  <div key={hour} style={{ height: HOUR_HEIGHT }} className="flex flex-col justify-start items-center">
+                    <span className="text-[10px] sm:text-xs font-bold text-rose-300 mt-[-7px]">{hour}:00</span>
                   </div>
                 ))}
               </div>
@@ -783,10 +803,17 @@ export default function App() {
                 );
 
                 return (
-                  <div key={dayOffset} className="flex-1 border-l border-slate-100 min-h-full">
-                    {/* Day Header */}
+                  <div 
+                    key={dayOffset} 
+                    className={cn(
+                      "flex-1 border-l border-slate-100 min-h-full transition-all duration-300",
+                      dayOffset !== selectedDayOffset && "hidden lg:block",
+                      dayOffset === selectedDayOffset && "block"
+                    )}
+                  >
+                    {/* Day Header - Desktop Only */}
                     <div className={cn(
-                      "sticky top-0 h-12 flex flex-col items-center justify-center bg-white z-10 border-b border-pink-50",
+                      "hidden lg:flex sticky top-0 h-12 flex-col items-center justify-center bg-white z-10 border-b border-pink-50",
                       isToday && "text-primary"
                     )}>
                       <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">
@@ -801,9 +828,9 @@ export default function App() {
                     </div>
 
                     {/* Hour Slots */}
-                    <div className="relative" style={{ height: HOURS.length * 80 }}>
+                    <div className="relative" style={{ height: HOURS.length * HOUR_HEIGHT }}>
                        {HOURS.map(hour => (
-                         <div key={hour} className="h-20 border-b border-pink-50/20" />
+                         <div key={hour} className="border-b border-pink-50/20" style={{ height: HOUR_HEIGHT }} />
                        ))}
 
                        {/* Event Blocks */}
@@ -813,14 +840,14 @@ export default function App() {
                            const startHour = start.getHours() + start.getMinutes() / 60;
                            const endHour = end.getHours() + end.getMinutes() / 60;
                            
-                           const top = startHour * 80;
-                           const height = Math.max(40, (endHour - startHour) * 80);
+                           const top = startHour * HOUR_HEIGHT;
+                           const height = Math.max(50, (endHour - startHour) * HOUR_HEIGHT);
 
                            const variants = {
-                             study: "bg-sky-50 border-sky-300 text-sky-700 shadow-sky-100",
-                             work: "bg-lavender/30 border-lavender/60 text-purple-700 shadow-purple-100",
-                             personal: "bg-pink-50 border-primary text-rose-700 shadow-pink-100",
-                             other: "bg-accent/20 border-accent/60 text-amber-700 shadow-amber-100"
+                             study: "bg-blue-50/95 border-blue-300 text-blue-700 shadow-blue-100/50",
+                             work: "bg-purple-50/95 border-purple-300 text-purple-700 shadow-purple-100/50",
+                             personal: "bg-rose-50/95 border-primary text-rose-700 shadow-pink-100/50",
+                             other: "bg-amber-50/95 border-amber-300 text-amber-700 shadow-amber-100/50"
                            };
 
                            const icons = {
@@ -842,22 +869,30 @@ export default function App() {
                                    variants[event.type]
                                  )}
                                >
-                                 <div className="flex items-start justify-between gap-1">
-                                   <div className="flex items-center gap-1 min-w-0">
-                                     {icons[event.type]}
-                                     <span className="font-bold truncate text-[11px] leading-tight">{event.title}</span>
+                                 <div className="flex items-start justify-between gap-1 p-0.5">
+                                   <div className="flex flex-col min-w-0">
+                                     <div className="flex items-center gap-1.5 mb-1">
+                                       <div className="shrink-0">{icons[event.type]}</div>
+                                       <span className="font-bold truncate text-[12px] sm:text-[13px] leading-tight">{event.title}</span>
+                                     </div>
+                                     <div className="flex items-center gap-1 text-[10px] opacity-70 font-semibold px-0.5">
+                                       <Clock size={10} />
+                                       {format(start, "HH:mm")} - {format(end, "HH:mm")}
+                                     </div>
                                    </div>
                                    <button 
                                      onClick={(e) => { e.stopPropagation(); deleteScheduleEntry(event.id); }}
-                                     className="opacity-0 group-hover/item:opacity-100 p-1 hover:bg-white/50 rounded-lg transition-all text-red-500 bg-white/30 backdrop-blur-sm"
+                                     className="opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 p-1.5 hover:bg-white/50 rounded-lg transition-all text-red-500 bg-white/40 backdrop-blur-sm shrink-0"
                                      title="Xóa lịch"
                                    >
-                                     <Trash2 size={12} />
+                                     <Trash2 size={13} />
                                    </button>
                                  </div>
-                                 <div className="opacity-70 text-[9px] mt-0.5">
-                                   {format(start, "HH:mm")} - {format(end, "HH:mm")}
-                                 </div>
+                                 {height > 85 && event.description && (
+                                   <p className="text-[10px] mt-2 line-clamp-2 opacity-80 border-t border-black/5 pt-1.5 italic px-0.5">
+                                     {event.description}
+                                   </p>
+                                 )}
                                </motion.div>
                              );
                            })}
@@ -905,7 +940,7 @@ export default function App() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-bold uppercase text-rose-300 ml-1">Lúc nào?</label>
                     <input 
@@ -938,13 +973,14 @@ export default function App() {
 
                 <div>
                    <label className="text-[10px] font-bold uppercase text-rose-300 ml-1">Loại lịch nè</label>
-                   <div className="flex gap-2 mt-1">
+                   <div className="grid grid-cols-2 sm:flex gap-2 mt-1">
                       {(['study', 'work', 'personal', 'other'] as const).map(type => (
                         <button 
                           key={type}
+                          type="button"
                           onClick={() => setNewEntry(prev => ({ ...prev, type }))}
                           className={cn(
-                            "flex-1 p-2 rounded-xl text-[10px] font-bold uppercase transition-all border-2",
+                            "p-2.5 rounded-xl text-[10px] font-bold uppercase transition-all border-2",
                             newEntry.type === type 
                               ? "bg-primary text-white border-primary shadow-lg shadow-pink-100" 
                               : "bg-white text-rose-300 border-pink-50 hover:border-pink-200"
