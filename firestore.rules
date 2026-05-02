@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validations ---
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['text', 'completed', 'createdAt', 'userId'])
+        && data.keys().size() == 4
+        && data.text is string && data.text.size() <= 1000
+        && data.completed is bool
+        && data.createdAt is number
+        && data.userId == request.auth.uid;
+    }
+
+    function isValidScheduleEntry(data) {
+      return data.keys().hasAll(['title', 'startTime', 'endTime', 'type', 'userId'])
+        && data.title is string && data.title.size() <= 500
+        && data.startTime is string
+        && data.endTime is string
+        && data.type in ['study', 'work', 'personal', 'other']
+        && data.userId == request.auth.uid;
+    }
+
+    // --- Collection Rules ---
+
+    match /tasks/{taskId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && isValidId(taskId)
+        && isValidTask(incoming());
+
+      allow update: if isSignedIn()
+        && existing().userId == request.auth.uid
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == existing().createdAt
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['text', 'completed'])
+          && incoming().text is string && incoming().text.size() <= 1000
+          && incoming().completed is bool
+        );
+
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /schedule/{entryId} {
+      allow get, list: if isSignedIn() && existing().userId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && isValidId(entryId)
+        && isValidScheduleEntry(incoming());
+
+      allow update: if isSignedIn()
+        && existing().userId == request.auth.uid
+        && incoming().userId == request.auth.uid
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'startTime', 'endTime', 'type', 'notes'])
+          && incoming().title is string && incoming().title.size() <= 500
+        );
+
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}

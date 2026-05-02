@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "Một công việc cần làm trong danh sách To-Do",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "Nội dung công việc" },
+        "completed": { "type": "boolean", "description": "Trạng thái hoàn thành" },
+        "createdAt": { "type": "number", "description": "Thời gian tạo (timestamp)" },
+        "userId": { "type": "string", "description": "ID của người dùng sở hữu công việc này" }
+      },
+      "required": ["text", "completed", "createdAt", "userId"]
+    },
+    "ScheduleEntry": {
+      "title": "Schedule Entry",
+      "description": "Một sự kiện trong thời gian biểu (học tập, làm việc...)",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Tiêu đề sự kiện" },
+        "startTime": { "type": "string", "format": "date-time", "description": "Thời gian bắt đầu (ISO string)" },
+        "endTime": { "type": "string", "format": "date-time", "description": "Thời gian kết thúc (ISO string)" },
+        "type": { "type": "string", "enum": ["study", "work", "personal", "other"], "description": "Loại sự kiện" },
+        "notes": { "type": "string", "description": "Ghi chú thêm" },
+        "userId": { "type": "string", "description": "ID của người dùng sở hữu sự kiện này" }
+      },
+      "required": ["title", "startTime", "endTime", "type", "userId"]
+    }
+  },
+  "firestore": {
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Danh sách các công việc lẻ"
+    },
+    "/schedule/{entryId}": {
+      "schema": "ScheduleEntry",
+      "description": "Lịch học và làm việc chi tiết"
+    }
+  }
+}
