@@ -105,8 +105,22 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i); // 24 hours
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    try {
+      const local = localStorage.getItem('local_tasks');
+      return local ? JSON.parse(local) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>(() => {
+    try {
+      const local = localStorage.getItem('local_schedule');
+      return local ? JSON.parse(local) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [currentDate, setCurrentDate] = useState(new Date());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -169,16 +183,6 @@ export default function App() {
 
   // Firestore Sync - Tasks
   useEffect(() => {
-    // Load from local storage first for immediate feedback
-    const localTasks = localStorage.getItem('local_tasks');
-    if (localTasks && !user) {
-      try {
-        setTasks(JSON.parse(localTasks));
-      } catch (e) {
-        console.error("Error parsing local tasks", e);
-      }
-    }
-
     if (!user) return;
 
     const q = query(collection(db, 'tasks'), where('userId', '==', user.uid));
@@ -226,16 +230,6 @@ export default function App() {
 
   // Firestore Sync - Schedule
   useEffect(() => {
-    // Load from local storage first
-    const localSchedules = localStorage.getItem('local_schedule');
-    if (localSchedules && !user) {
-      try {
-        setSchedule(JSON.parse(localSchedules));
-      } catch (e) {
-        console.error("Error parsing local schedule", e);
-      }
-    }
-
     if (!user) return;
 
     const q = query(collection(db, 'schedule'), where('userId', '==', user.uid));
