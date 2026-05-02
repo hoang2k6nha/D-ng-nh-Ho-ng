@@ -18,7 +18,17 @@ import {
   Cloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { format, startOfWeek, addDays, isSameDay, addHours, startOfDay, intervalToDuration } from 'date-fns';
+import { 
+  format, 
+  startOfWeek, 
+  addDays, 
+  isSameDay, 
+  addHours, 
+  startOfDay, 
+  intervalToDuration,
+  setHours,
+  setMinutes
+} from 'date-fns';
 import { vi } from 'date-fns/locale';
 import toast, { Toaster } from 'react-hot-toast';
 import { cn } from './lib/utils';
@@ -91,13 +101,29 @@ interface ScheduleEntry {
   notes?: string;
 }
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6 AM to 10 PM
+const HOURS = Array.from({ length: 24 }, (_, i) => i); // 24 hours
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Helper to format date for datetime-local input (YYYY-MM-DDTHH:mm)
+  const toLocalISOString = (date: Date) => {
+    const offset = date.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
+    return localISOTime;
+  };
+
+  // Auto-scroll to current hour on load
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const currentHour = new Date().getHours();
+      scrollContainerRef.current.scrollTop = Math.max(0, (currentHour - 1) * 80);
+    }
+  }, []);
   const [isLoading, setIsLoading] = useState(true);
   
   // States for Modals
@@ -137,15 +163,47 @@ export default function App() {
 
   // Firestore Sync - Tasks
   useEffect(() => {
-    if (!user) {
-      setTasks([]);
-      return;
+    // Load from local storage first for immediate feedback
+    const localTasks = localStorage.getItem('local_tasks');
+    if (localTasks && !user) {
+      try {
+        setTasks(JSON.parse(localTasks));
+      } catch (e) {
+        console.error("Error parsing local tasks", e);
+      }
     }
 
+    if (!user) return;
+
     const q = query(collection(db, 'tasks'), where('userId', '==', user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
-      setTasks(data.sort((a, b) => b.createdAt - a.createdAt));
+      const sortedData = data.sort((a, b) => b.createdAt - a.createdAt);
+      
+      setTasks(sortedData);
+
+      // Sync local tasks to cloud if any exist after login
+      const pendingLocalTasks = localStorage.getItem('local_tasks');
+      if (pendingLocalTasks) {
+        try {
+          const parsedLocal = JSON.parse(pendingLocalTasks) as Task[];
+          if (parsedLocal.length > 0) {
+            toast.loading("Đang đồng bộ việc cần làm cũ...");
+            for (const localTask of parsedLocal) {
+              await addDoc(collection(db, 'tasks'), {
+                text: localTask.text,
+                completed: localTask.completed,
+                createdAt: localTask.createdAt,
+                userId: user.uid
+              });
+            }
+            localStorage.removeItem('local_tasks');
+            toast.success("Đồng bộ hoàn tất! ✨");
+          }
+        } catch (e) {
+          console.error("Sync error", e);
+        }
+      }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'tasks');
     });
@@ -153,23 +211,66 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // Firestore Sync - Schedule
+  // Save to local storage whenever tasks change and user is NOT logged in
   useEffect(() => {
     if (!user) {
-      setSchedule([]);
-      return;
+      localStorage.setItem('local_tasks', JSON.stringify(tasks));
+    }
+  }, [tasks, user]);
+
+  // Firestore Sync - Schedule
+  useEffect(() => {
+    // Load from local storage first
+    const localSchedules = localStorage.getItem('local_schedule');
+    if (localSchedules && !user) {
+      try {
+        setSchedule(JSON.parse(localSchedules));
+      } catch (e) {
+        console.error("Error parsing local schedule", e);
+      }
     }
 
+    if (!user) return;
+
     const q = query(collection(db, 'schedule'), where('userId', '==', user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEntry));
       setSchedule(data);
+
+      // Sync local schedule to cloud if any exist after login
+      const pendingLocal = localStorage.getItem('local_schedule');
+      if (pendingLocal) {
+        try {
+          const parsedLocal = JSON.parse(pendingLocal) as ScheduleEntry[];
+          if (parsedLocal.length > 0) {
+            toast.loading("Đang đồng bộ lịch cũ của bé...");
+            for (const entry of parsedLocal) {
+              const { id, ...saveData } = entry;
+              await addDoc(collection(db, 'schedule'), {
+                ...saveData,
+                userId: user.uid
+              });
+            }
+            localStorage.removeItem('local_schedule');
+            toast.success("Lịch đã được đồng bộ lên mây! ✨");
+          }
+        } catch (e) {
+          console.error("Schedule sync error", e);
+        }
+      }
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'schedule');
     });
 
     return () => unsubscribe();
   }, [user]);
+
+  // Save schedule to local storage when not logged in
+  useEffect(() => {
+    if (!user) {
+      localStorage.setItem('local_schedule', JSON.stringify(schedule));
+    }
+  }, [schedule, user]);
 
   // Auth Handlers
   const handleLogin = async () => {
@@ -198,11 +299,28 @@ export default function App() {
 
   // Task Handlers
   const addTask = async () => {
-    if (!newTaskText.trim() || !user) return;
-    const taskData = {
+    if (!newTaskText.trim()) return;
+    
+    const newTask: Task = {
+      id: Math.random().toString(36).substr(2, 9),
       text: newTaskText,
       completed: false,
       createdAt: Date.now(),
+    };
+
+    if (!user) {
+      // Offline mode
+      setTasks(prev => [newTask, ...prev]);
+      setNewTaskText('');
+      setShowTaskInput(false);
+      toast.success("Đã ghi chú lại cho bé! (Lưu tạm trên máy)");
+      return;
+    }
+
+    const taskData = {
+      text: newTask.text,
+      completed: newTask.completed,
+      createdAt: newTask.createdAt,
       userId: user.uid
     };
     
@@ -216,7 +334,10 @@ export default function App() {
   };
 
   const toggleTask = async (task: Task) => {
-    if (!user) return;
+    if (!user) {
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
+      return;
+    }
     try {
       await updateDoc(doc(db, 'tasks', task.id), { completed: !task.completed });
     } catch (error) {
@@ -225,7 +346,11 @@ export default function App() {
   };
 
   const deleteTask = async (id: string) => {
-    if (!user) return;
+    if (!user) {
+      setTasks(prev => prev.filter(t => t.id !== id));
+      localStorage.setItem('local_tasks', JSON.stringify(tasks.filter(t => t.id !== id)));
+      return;
+    }
     try {
       await deleteDoc(doc(db, 'tasks', id));
     } catch (error) {
@@ -233,21 +358,76 @@ export default function App() {
     }
   };
 
-  // Schedule Handlers
   const addScheduleEntry = async () => {
-    if (!newEntry.title || !user) return;
-    const entryData = {
-      ...newEntry,
-      userId: user.uid
+    if (!newEntry.title || !newEntry.startTime || !newEntry.endTime) {
+      toast.error("Bé điền thiếu thông tin kìa!");
+      return;
+    }
+
+    // Ensure end is after start
+    if (new Date(newEntry.startTime) >= new Date(newEntry.endTime)) {
+      toast.error("Giờ kết thúc phải sau giờ bắt đầu chứ bé ơi! 🎀");
+      return;
+    }
+
+    const entryToSave = {
+      title: newEntry.title,
+      startTime: newEntry.startTime,
+      endTime: newEntry.endTime,
+      type: newEntry.type || 'study',
+      notes: newEntry.notes || ''
     };
-    
-    try {
-      await addDoc(collection(db, 'schedule'), entryData);
+
+    if (!user) {
+      const offlineEntry: ScheduleEntry = {
+        ...entryToSave,
+        id: Math.random().toString(36).substr(2, 9),
+      } as ScheduleEntry;
+      setSchedule(prev => [...prev, offlineEntry]);
       setShowScheduleForm(false);
-      toast.success("Đã thêm lịch!");
+      setNewEntry({ type: 'study' });
+      toast.success("Đã ghi vào sổ tay cho bé! ✨");
+      return;
+    }
+
+    try {
+      if (newEntry.id) {
+        await updateDoc(doc(db, 'schedule', newEntry.id), entryToSave);
+        toast.success("Đã sửa lịch cho bé rồi ạ! 🌸");
+      } else {
+        await addDoc(collection(db, 'schedule'), {
+          ...entryToSave,
+          userId: user.uid
+        });
+        toast.success("Lịch mới của bé đã được lưu! 🩰");
+      }
+      setShowScheduleForm(false);
+      setNewEntry({ type: 'study' });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'schedule');
     }
+  };
+
+  const deleteScheduleEntry = async (id: string) => {
+    if (!confirm("Bé có chắc muốn xóa lịch này không? 🥺")) return;
+    
+    if (!user) {
+      setSchedule(prev => prev.filter(s => s.id !== id));
+      toast.success("Đã xóa lịch rồi nhé!");
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'schedule', id));
+      toast.success("Lịch đã được xóa! ✨");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `schedule/${id}`);
+    }
+  };
+
+  const openEditSchedule = (event: ScheduleEntry) => {
+    setNewEntry(event);
+    setShowScheduleForm(true);
   };
 
   const startOfWeekDate = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -477,6 +657,13 @@ export default function App() {
                 <CalendarIcon size={18} className="text-rose-500" />
                 Thời gian biểu của Hà
               </h2>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setCurrentDate(new Date())}
+                className="px-3 py-1.5 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100"
+              >
+                Hôm nay
+              </button>
               <div className="flex items-center gap-1 bg-pink-50 p-1 rounded-xl">
                 <button 
                   onClick={() => setCurrentDate(prev => addDays(prev, -7))}
@@ -488,6 +675,18 @@ export default function App() {
                   {format(startOfWeekDate, "d MMM", { locale: vi })} - {format(addDays(startOfWeekDate, 6), "d MMM", { locale: vi })}
                 </span>
                 <button 
+                  onClick={() => setCurrentDate(prev => addDays(prev, -1))}
+                  className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
+                >
+                  <ChevronLeft size={12} className="opacity-50" />
+                </button>
+                <button 
+                  onClick={() => setCurrentDate(prev => addDays(prev, 1))}
+                  className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
+                >
+                  <ChevronRight size={12} className="opacity-50" />
+                </button>
+                <button 
                   onClick={() => setCurrentDate(prev => addDays(prev, 7))}
                   className="p-1 hover:bg-white rounded-lg shadow-sm transition-all text-rose-400"
                 >
@@ -495,9 +694,21 @@ export default function App() {
                 </button>
               </div>
             </div>
+            </div>
             
             <button 
-              onClick={() => setShowScheduleForm(true)}
+              onClick={() => {
+                const now = new Date();
+                const start = setMinutes(setHours(now, now.getHours()), 0);
+                const end = addHours(start, 1);
+                
+                setNewEntry({ 
+                  type: 'study', 
+                  startTime: start.toISOString(), 
+                  endTime: end.toISOString() 
+                });
+                setShowScheduleForm(true);
+              }}
               className="px-4 py-2 bg-primary text-white rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-rose-600 active:scale-95 transition-all shadow-md shadow-pink-100"
             >
               <Plus size={16} /> Thêm lịch cho bé 🩰
@@ -505,14 +716,14 @@ export default function App() {
           </div>
 
           {/* Grid Content */}
-          <div className="flex-1 overflow-auto custom-scrollbar relative">
-            <div className="flex min-w-[800px]">
+          <div ref={scrollContainerRef} className="flex-1 overflow-auto custom-scrollbar relative">
+            <div className="flex min-w-[800px] h-full">
               {/* Time Column */}
-              <div className="w-20 shrink-0 sticky left-0 bg-white/95 backdrop-blur-sm z-20 pt-12 border-right border-slate-100">
+              <div className="w-16 shrink-0 sticky left-0 bg-white/95 backdrop-blur-sm z-20 pt-12 border-r border-pink-50">
                 {HOURS.map(hour => (
                   <div key={hour} className="h-20 flex flex-col justify-start items-center">
-                    <span className="text-[10px] font-bold text-slate-400 mt-[-7px]">{hour}:00</span>
-                    <div className="flex-1 w-px bg-slate-100" />
+                    <span className="text-[10px] font-bold text-rose-300 mt-[-7px]">{hour}:00</span>
+                    <div className="flex-1 w-px bg-pink-50/50" />
                   </div>
                 ))}
               </div>
@@ -522,6 +733,10 @@ export default function App() {
                 const day = addDays(startOfWeekDate, dayOffset);
                 const isToday = isSameDay(day, new Date());
                 
+                const dayEvents = schedule.filter(event => 
+                  isSameDay(new Date(event.startTime), day)
+                );
+
                 return (
                   <div key={dayOffset} className="flex-1 border-l border-slate-100 min-h-full">
                     {/* Day Header */}
@@ -541,21 +756,20 @@ export default function App() {
                     </div>
 
                     {/* Hour Slots */}
-                    <div className="relative h-[1280px]"> {/* 16 hours * 80px */}
+                    <div className="relative" style={{ height: HOURS.length * 80 }}>
                        {HOURS.map(hour => (
-                         <div key={hour} className="h-20 border-b border-slate-50/50" />
+                         <div key={hour} className="h-20 border-b border-pink-50/20" />
                        ))}
 
                        {/* Event Blocks */}
-                       {schedule
-                         .filter(event => isSameDay(new Date(event.startTime), day))
-                         .map(event => {
+                       {dayEvents.map(event => {
                            const start = new Date(event.startTime);
                            const end = new Date(event.endTime);
                            const startHour = start.getHours() + start.getMinutes() / 60;
                            const endHour = end.getHours() + end.getMinutes() / 60;
-                           const top = (startHour - 6) * 80;
-                           const height = (endHour - startHour) * 80;
+                           
+                           const top = startHour * 80;
+                           const height = Math.max(40, (endHour - startHour) * 80);
 
                            const variants = {
                              study: "bg-sky-50 border-sky-300 text-sky-700 shadow-sky-100",
@@ -572,26 +786,35 @@ export default function App() {
                            };
 
                            return (
-                             <motion.div 
-                               initial={{ opacity: 0, scale: 0.9 }}
-                               animate={{ opacity: 1, scale: 1 }}
-                               key={event.id}
-                               style={{ top, height }}
-                               className={cn(
-                                 "schedule-block left-1 right-1 overflow-hidden",
-                                 variants[event.type]
-                               )}
-                             >
-                               <div className="flex items-center gap-1 mb-1">
-                                 {icons[event.type]}
-                                 <span className="font-bold truncate">{event.title}</span>
-                               </div>
-                               <div className="opacity-70 text-[10px]">
-                                 {format(start, "HH:mm")} - {format(end, "HH:mm")}
-                               </div>
-                             </motion.div>
-                           )
-                         })}
+                               <motion.div 
+                                 initial={{ opacity: 0, scale: 0.9 }}
+                                 animate={{ opacity: 1, scale: 1 }}
+                                 key={event.id}
+                                 style={{ top, height }}
+                                 onClick={() => openEditSchedule(event)}
+                                 className={cn(
+                                   "schedule-block left-1 right-1 overflow-hidden group/item",
+                                   variants[event.type]
+                                 )}
+                               >
+                                 <div className="flex items-start justify-between gap-1">
+                                   <div className="flex items-center gap-1 min-w-0">
+                                     {icons[event.type]}
+                                     <span className="font-bold truncate text-[11px] leading-tight">{event.title}</span>
+                                   </div>
+                                   <button 
+                                     onClick={(e) => { e.stopPropagation(); deleteScheduleEntry(event.id); }}
+                                     className="opacity-0 group-hover/item:opacity-100 p-0.5 hover:bg-white/50 rounded transition-all text-red-500"
+                                   >
+                                     <Trash2 size={10} />
+                                   </button>
+                                 </div>
+                                 <div className="opacity-70 text-[9px] mt-0.5">
+                                   {format(start, "HH:mm")} - {format(end, "HH:mm")}
+                                 </div>
+                               </motion.div>
+                             );
+                           })}
                     </div>
                   </div>
                 );
@@ -621,7 +844,7 @@ export default function App() {
             >
               <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-rose-600">
                  <CalendarIcon className="text-primary" />
-                 Thêm lịch cho bé mới nè
+                 {newEntry.id ? 'Sửa lịch cho bé' : 'Thêm lịch cho bé mới nè'}
               </h3>
               
               <div className="space-y-4">
@@ -642,7 +865,13 @@ export default function App() {
                     <input 
                       type="datetime-local" 
                       className="w-full p-3 bg-pink-50/50 border border-pink-100 rounded-2xl outline-none focus:border-primary transition-all text-xs font-bold text-rose-600"
-                      onChange={e => setNewEntry(prev => ({ ...prev, startTime: new Date(e.target.value).toISOString() }))}
+                      value={newEntry.startTime ? toLocalISOString(new Date(newEntry.startTime)) : ''}
+                      onChange={e => {
+                        const date = new Date(e.target.value);
+                        if (!isNaN(date.getTime())) {
+                          setNewEntry(prev => ({ ...prev, startTime: date.toISOString() }));
+                        }
+                      }}
                     />
                   </div>
                   <div>
@@ -650,7 +879,13 @@ export default function App() {
                     <input 
                       type="datetime-local" 
                       className="w-full p-3 bg-pink-50/50 border border-pink-100 rounded-2xl outline-none focus:border-primary transition-all text-xs font-bold text-rose-600"
-                      onChange={e => setNewEntry(prev => ({ ...prev, endTime: new Date(e.target.value).toISOString() }))}
+                      value={newEntry.endTime ? toLocalISOString(new Date(newEntry.endTime)) : ''}
+                      onChange={e => {
+                        const date = new Date(e.target.value);
+                        if (!isNaN(date.getTime())) {
+                          setNewEntry(prev => ({ ...prev, endTime: date.toISOString() }));
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -678,12 +913,22 @@ export default function App() {
                    </div>
                 </div>
 
-                <button 
-                  onClick={addScheduleEntry}
-                  className="w-full py-4 bg-primary text-white rounded-2xl font-bold mt-4 hover:bg-rose-600 transition-all shadow-xl shadow-pink-100 active:scale-95"
-                >
-                  Xong rồi ạ! ✨
-                </button>
+                <div className="flex gap-3 mt-4">
+                  <button 
+                    onClick={addScheduleEntry}
+                    className="flex-1 py-4 bg-primary text-white rounded-2xl font-bold hover:bg-rose-600 transition-all shadow-xl shadow-pink-100 active:scale-95"
+                  >
+                    {newEntry.id ? 'Lưu thay đổi' : 'Xong rồi ạ! ✨'}
+                  </button>
+                  {newEntry.id && (
+                    <button 
+                      onClick={() => { if(newEntry.id) deleteScheduleEntry(newEntry.id); setShowScheduleForm(false); }}
+                      className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-100 transition-all border border-red-100"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>
