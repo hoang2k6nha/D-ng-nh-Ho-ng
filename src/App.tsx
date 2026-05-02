@@ -107,7 +107,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
-      const local = localStorage.getItem('local_tasks');
+      const local = localStorage.getItem('cache_tasks');
       return local ? JSON.parse(local) : [];
     } catch (e) {
       return [];
@@ -115,7 +115,7 @@ export default function App() {
   });
   const [schedule, setSchedule] = useState<ScheduleEntry[]>(() => {
     try {
-      const local = localStorage.getItem('local_schedule');
+      const local = localStorage.getItem('cache_schedule');
       return local ? JSON.parse(local) : [];
     } catch (e) {
       return [];
@@ -156,6 +156,8 @@ export default function App() {
     endTime: addHours(new Date(), 1).toISOString()
   });
 
+  const lastUserRef = useRef<User | null>(null);
+
   // Auth & Connection Test
   useEffect(() => {
     const testConnection = async () => {
@@ -171,10 +173,24 @@ export default function App() {
     testConnection();
 
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      const isLoggingOut = lastUserRef.current && !u;
+      lastUserRef.current = u;
       setUser(u);
       setIsLoading(false);
+      
       if (u) {
         toast.success(`Chào mừng ${u.displayName || 'bạn'}!`);
+      } else if (isLoggingOut) {
+        // Restore local guest data if we are logging out
+        const localTasks = localStorage.getItem('local_tasks');
+        const localSchedule = localStorage.getItem('local_schedule');
+        
+        setTasks(localTasks ? JSON.parse(localTasks) : []);
+        setSchedule(localSchedule ? JSON.parse(localSchedule) : []);
+        
+        localStorage.removeItem('cache_tasks');
+        localStorage.removeItem('cache_schedule');
+        toast.success("Đã đăng xuất.");
       }
     });
 
@@ -208,18 +224,19 @@ export default function App() {
       try {
         const parsedLocal = JSON.parse(pendingLocalTasks) as Task[];
         if (parsedLocal.length > 0) {
-          // Remove immediately to prevent race conditions during sync
-          localStorage.removeItem('local_tasks');
-          
           const toastId = toast.loading("Đang đồng bộ việc cần làm cũ...");
-          for (const localTask of parsedLocal) {
-            await addDoc(collection(db, 'tasks'), {
+          // Transfer to cloud
+          const promises = parsedLocal.map(localTask => 
+            addDoc(collection(db, 'tasks'), {
               text: localTask.text,
               completed: localTask.completed,
               createdAt: localTask.createdAt,
               userId: user.uid
-            });
-          }
+            })
+          );
+          
+          await Promise.all(promises);
+          localStorage.removeItem('local_tasks');
           toast.success("Đồng bộ hoàn tất! ✨", { id: toastId });
         } else {
           localStorage.removeItem('local_tasks');
@@ -230,10 +247,11 @@ export default function App() {
     };
 
     syncTasks();
-  }, [user]);
+  }, [!!user]); // Trigger only when user login status changes
 
-  // Save to local storage whenever tasks change and user is NOT logged in
+  // Save to local storage whenever tasks change (Caching)
   useEffect(() => {
+    localStorage.setItem('cache_tasks', JSON.stringify(tasks));
     if (!user) {
       localStorage.setItem('local_tasks', JSON.stringify(tasks));
     }
@@ -265,16 +283,18 @@ export default function App() {
       try {
         const parsedLocal = JSON.parse(pendingLocal) as ScheduleEntry[];
         if (parsedLocal.length > 0) {
-          localStorage.removeItem('local_schedule');
-          
           const toastId = toast.loading("Đang đồng bộ lịch cũ của bé...");
-          for (const entry of parsedLocal) {
+          
+          const promises = parsedLocal.map(entry => {
             const { id, ...saveData } = entry;
-            await addDoc(collection(db, 'schedule'), {
+            return addDoc(collection(db, 'schedule'), {
               ...saveData,
               userId: user.uid
             });
-          }
+          });
+
+          await Promise.all(promises);
+          localStorage.removeItem('local_schedule');
           toast.success("Lịch đã được đồng bộ lên mây! ✨", { id: toastId });
         } else {
           localStorage.removeItem('local_schedule');
@@ -285,10 +305,11 @@ export default function App() {
     };
 
     syncSchedule();
-  }, [user]);
+  }, [!!user]); // Trigger only when user login status changes
 
-  // Save schedule to local storage when not logged in
+  // Save schedule to local storage (Caching)
   useEffect(() => {
+    localStorage.setItem('cache_schedule', JSON.stringify(schedule));
     if (!user) {
       localStorage.setItem('local_schedule', JSON.stringify(schedule));
     }
