@@ -224,7 +224,6 @@ export default function App() {
       try {
         const parsedLocal = JSON.parse(pendingLocalTasks) as Task[];
         if (parsedLocal.length > 0) {
-          const toastId = toast.loading("Đang đồng bộ việc cần làm cũ...");
           // Transfer to cloud
           const promises = parsedLocal.map(localTask => 
             addDoc(collection(db, 'tasks'), {
@@ -237,7 +236,6 @@ export default function App() {
           
           await Promise.all(promises);
           localStorage.removeItem('local_tasks');
-          toast.success("Đồng bộ hoàn tất! ✨", { id: toastId });
         } else {
           localStorage.removeItem('local_tasks');
         }
@@ -283,8 +281,6 @@ export default function App() {
       try {
         const parsedLocal = JSON.parse(pendingLocal) as ScheduleEntry[];
         if (parsedLocal.length > 0) {
-          const toastId = toast.loading("Đang đồng bộ lịch cũ của bé...");
-          
           const promises = parsedLocal.map(entry => {
             const { id, ...saveData } = entry;
             return addDoc(collection(db, 'schedule'), {
@@ -295,7 +291,6 @@ export default function App() {
 
           await Promise.all(promises);
           localStorage.removeItem('local_schedule');
-          toast.success("Lịch đã được đồng bộ lên mây! ✨", { id: toastId });
         } else {
           localStorage.removeItem('local_schedule');
         }
